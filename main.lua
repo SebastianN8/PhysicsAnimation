@@ -165,6 +165,8 @@ local sequence_data_robot = {
 local robot = display.newSprite(sheetIdleRobot, sequence_data_robot)
 robot.x = display.contentCenterX * 1.5
 robot.y = display.contentHeight - 430
+robot:setSequence('idle')
+robot:play()
 
 -- Buttons
 -- D-pad
