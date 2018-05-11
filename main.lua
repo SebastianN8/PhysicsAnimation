@@ -11,6 +11,9 @@
 -- Hidding status bar
 display.setStatusBar(display.HiddenStatusBar)
 
+-- Variable for bullets
+local theBullets = {}
+
 -- Introducion physics
 local physics = require('physics')
 physics.start()
@@ -20,6 +23,14 @@ physics.setGravity(0, 25)
 -- Location Variables
 --centerX = display.contentWidth * 0.5
 --centerY = display.contentHeight * 0.5
+
+-- left barrier
+local leftBarrier = display.newRect(0, display.contentHeight / 2, 1, display.contentHeight)
+leftBarrier.id = 'the left barrier'
+physics.addBody(leftBarrier, 'static', {
+	friction = 0.5,
+	bounce = 0.3
+	})
 
 -- Land image
 local myLand = display.newImageRect('./Assets/Sprites/land.png', 2048, 400)
@@ -78,35 +89,35 @@ local sheetThrowNinja = graphics.newImageSheet('./Assets/SpriteSheets/Ninja/ninj
 -- The sequence data table for the ninja
 local sequence_data_ninja = {
 {
-	name = 'Idle',
+	name = 'idle',
 	start = 1,
 	count = 10,
 	time = 1000,
-	loopCount = 0,
+	loopCount = 1,
 	sheet = sheetIdleNinja
 },
 {
-	name = 'Run',
+	name = 'run',
 	start = 1,
 	count = 10,
 	time = 1000,
-	loopCount = 0,
+	loopCount = 1,
 	sheet = sheetRunNinja
 },
 {
-	name = 'Jump',
+	name = 'jump',
 	start = 1,
 	count = 10,
-	time = 1000,
-	loopCount = 0,
+	time = 2000,
+	loopCount = 1,
 	sheet = sheetJumpNinja
 },
 {
-	name = 'Throw',
+	name = 'throw',
 	start = 1,
 	count = 10,
 	time = 1000,
-	loopCount = 0,
+	loopCount = 1,
 	sheet = sheetThrowNinja
 }
 }
@@ -115,6 +126,11 @@ local sequence_data_ninja = {
 local ninja = display.newSprite(sheetIdleNinja, sequence_data_ninja)
 ninja.x = display.contentCenterX / 5
 ninja.y = display.contentHeight - 417
+physics.addBody(ninja, 'dynamic', {
+	friction = 0.5,
+	bounce = 0.3
+	})
+ninja.isFixedRotation = true
 ninja:setSequence('idle')
 ninja:play()
 
@@ -148,15 +164,15 @@ local sequence_data_robot = {
 	start = 1,
 	count = 10,
 	time = 1000,
-	loopCount = 0,
+	loopCount = 1,
 	sheet = sheetIdleRobot
 },
 {
-	name = 'Dead',
+	name = 'dead',
 	start = 1,
 	count = 10,
 	time = 1000,
-	loopCount = 0,
+	loopCount = 1,
 	sheet = sheetDeadRobot
 }
 }
@@ -165,6 +181,11 @@ local sequence_data_robot = {
 local robot = display.newSprite(sheetIdleRobot, sequence_data_robot)
 robot.x = display.contentCenterX * 1.5
 robot.y = display.contentHeight - 430
+robot.id = 'robot'
+physics.addBody(robot, 'dynamic', {
+	friction = 0.5,
+	})
+robot.isFixedRotation = true
 robot:setSequence('idle')
 robot:play()
 
@@ -207,10 +228,127 @@ jumpButton.y = display.contentHeight - 80
 jumpButton.id = 'Jump button'
 jumpButton.alpha = 1
 
+-- Shoot button
 local shootButton = display.newImage('./Assets/Sprites/jumpButton.png')
 shootButton.x = display.contentWidth - 230
 shootButton.y = display.contentHeight - 80
 shootButton.id = 'Shoot button'
 
+-- Function for movement to the right
+function rightArrow:touch(event)
+	if (event.phase == 'ended') then
+		transition.moveBy(ninja, {
+			x = 150,
+			y = 0,
+			time = 1000
+			})
+		ninja:setSequence('run')
+		ninja:play()
+		timer.performWithDelay(1000, resetToIdle)
+	end
+end
+
+-- Function to shoot
+function shootButton:touch(event)
+	if (event.phase == 'began') then
+		ninja:setSequence('throw')
+		ninja:play()
+		timer.performWithDelay(1000, resetToIdle)
+		-- Introduce a single bullet
+		local singleBullet = display.newImage('./Assets/Sprites/Kunai.png')
+		singleBullet.x = ninja.x + 200
+		singleBullet.y = ninja.y
+		singleBullet.id = 'a bullet'
+		physics.addBody(singleBullet, 'dynamic', {
+			friction = 0.5
+			})
+		singleBullet.isFixedRotation = true
+		-- Make the object a bullet
+		singleBullet.isBullet = true
+		singleBullet.gravityScale = 0
+		singleBullet:setLinearVelocity(1500, 0)
+		-- Introduce the object to the table
+		table.insert(theBullets, singleBullet)
+	end
+end
+
+-- Function to remove the bullets
+local function checkBulletsUsed(event)
+	local bulletCounter
+	-- If statement
+	if #theBullets > 0 then
+		for bulletCounter = #theBullets, 1, -1 do
+			if (theBullets[bulletCounter].x > display.contentWidth + 1000) then
+				theBullets[bulletCounter]:removeSelf()
+				theBullets[bulletCounter] = nil
+				print('removed')
+				table.remove(theBullets, bulletCounter)
+			end
+		end
+	end
+end
+
+-- Multi collision function
+local function onCollision(event)
+	if (event.phase == 'began') then
+		-- Variables for object order
+		local obj1 = event.object1
+		local obj2 = event.object2
+
+		if (obj1.id == 'a bullet' and obj2.id == 'robot') or 
+			(obj1.id == 'robot' and obj2.id == 'a bullet') then
+			-- Removing objects from screen
+			display.remove(obj1)
+			display.remove(obj2)
+
+			-- For loop to erase bullets
+			local bulletCounter
+			for bulletCounter = #theBullets, 1, -1 do
+				if (theBullets[bulletCounter] == obj1 or theBullets[bulletCounter] == obj2) then
+					theBullets[bulletCounter]:removeSelf()
+					theBullets[bulletCounter] = nil
+					table.remove(theBullets, bulletCounter)
+					break
+				end
+			end
+
+			--Remove character
+			theEnemy:removeSelf()
+			theEnemy = nil
+
+			-- Increase score
+			print('You could increase your score here')
+
+			-- Sound effect
+			local explosionSound = audio.loadStream('./Assets/Sounds/explosion.wav')
+			local explosionChannel = audio.play(explosionSound)
+		end
+	end
+end
 
 
+
+-- Function to jump
+function jumpButton:touch(event)
+	if (event.phase == 'ended') then
+	    ninja:setLinearVelocity( 0, -750 )
+	    ninja:setSequence('jump')
+	    ninja:play()
+	    timer.performWithDelay(2000, resetToIdle)
+	end
+end
+
+-- Resenting Sprite Sheet
+local function resetToIdle(event)
+	if (event.phase == 'ended') then
+		ninja:setSequence('idle')
+		ninja:play()
+	end
+end
+
+-- Event Listeners 
+rightArrow:addEventListener('touch', rightArrow)
+jumpButton:addEventListener('touch', jumpButton)
+ninja:addEventListener('sprite', resetToIdle)
+shootButton:addEventListener('touch', shootButton)
+Runtime:addEventListener('enterFrame', checkBulletsUsed)
