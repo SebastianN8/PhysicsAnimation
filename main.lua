@@ -18,7 +18,7 @@ local theBullets = {}
 local physics = require('physics')
 physics.start()
 physics.setGravity(0, 25)
--- physics.setDrawMode('hybrid')
+--physics.setDrawMode('hybrid')
 
 -- Location Variables
 --centerX = display.contentWidth * 0.5
@@ -164,7 +164,7 @@ local sequence_data_robot = {
 	start = 1,
 	count = 10,
 	time = 1000,
-	loopCount = 1,
+	loopCount = 0,
 	sheet = sheetIdleRobot
 },
 {
@@ -181,13 +181,13 @@ local sequence_data_robot = {
 local robot = display.newSprite(sheetIdleRobot, sequence_data_robot)
 robot.x = display.contentCenterX * 1.5
 robot.y = display.contentHeight - 430
+robot:setSequence('idle')
+robot:play()
 robot.id = 'robot'
 physics.addBody(robot, 'dynamic', {
 	friction = 0.5,
 	})
 robot.isFixedRotation = true
-robot:setSequence('idle')
-robot:play()
 
 -- Buttons
 -- D-pad
@@ -198,22 +198,22 @@ thedPad.id = 'The d-pad'
 thedPad.alpha = 0.5
 
 -- Up arrow
-local upArrow = display.newImage('./Assets/Sprites/upArrow.png')
-upArrow.x = 160
-upArrow.y = display.contentHeight - 268.7
-upArrow.id = 'Up arrow'
+--local upArrow = display.newImage('./Assets/Sprites/upArrow.png')
+--upArrow.x = 160
+--upArrow.y = display.contentHeight - 268.7
+--upArrow.id = 'Up arrow'
 
 -- Down arrow
-local downArrow = display.newImage('./Assets/Sprites/downArrow.png')
-downArrow.x = 160
-downArrow.y = display.contentHeight - 52.3
-downArrow.id = 'Down arrow'
+--local downArrow = display.newImage('./Assets/Sprites/downArrow.png')
+--downArrow.x = 160
+--downArrow.y = display.contentHeight - 52.3
+--downArrow.id = 'Down arrow'
 
 -- Left arrow
-local leftArrow = display.newImage('./Assets/Sprites/leftArrow.png')
-leftArrow.x = 52
-leftArrow.y = display.contentHeight - 160
-leftArrow.id = 'Left arrow'
+--local leftArrow = display.newImage('./Assets/Sprites/leftArrow.png')
+--leftArrow.x = 52
+--leftArrow.y = display.contentHeight - 160
+--leftArrow.id = 'Left arrow'
 
 -- Right arrow
 local rightArrow = display.newImage('./Assets/Sprites/rightArrow.png')
@@ -294,13 +294,11 @@ local function onCollision(event)
 		-- Variables for object order
 		local obj1 = event.object1
 		local obj2 = event.object2
+		local explosionLocationX = obj1.x
+		local explosionLocationY = obj2.y
 
 		if (obj1.id == 'a bullet' and obj2.id == 'robot') or 
 			(obj1.id == 'robot' and obj2.id == 'a bullet') then
-			-- Removing objects from screen
-			display.remove(obj1)
-			display.remove(obj2)
-
 			-- For loop to erase bullets
 			local bulletCounter
 			for bulletCounter = #theBullets, 1, -1 do
@@ -312,16 +310,75 @@ local function onCollision(event)
 				end
 			end
 
-			--Remove character
-			theEnemy:removeSelf()
-			theEnemy = nil
-
-			-- Increase score
-			print('You could increase your score here')
+			-- Remove robot after collision
+			robot:removeSelf()
+			robot = nil
 
 			-- Sound effect
 			local explosionSound = audio.loadStream('./Assets/Sounds/explosion.wav')
 			local explosionChannel = audio.play(explosionSound)
+
+			-- Code that deals with the explosions 
+			-- variable that contains the parameters for the function
+			local emitterParams = {
+
+			    startColorAlpha = 1,
+
+			    startParticleSizeVariance = 250,
+
+			    startColorGreen = 0.3031555,
+
+			    yCoordFlipped = -1,
+
+			    blendFuncSource = 769,
+
+			    rotatePerSecondVariance = 153.95,
+
+			    particleLifespan = 0.7237,
+
+			    tangentialAcceleration = -1440.74,
+
+			    finishColorBlue = 0.34567,
+
+			    finishColorGreen = 0.5443883,
+
+			    blendFuncDestination = 1,
+
+			    startParticleSize = 400.95,
+
+			    startColorRed = 1,
+
+			    textureFileName = "./assets/sprites/fire.png",
+
+			    startColorVarianceAlpha = 1,
+
+			    maxParticles = 100,
+
+			    finishParticleSize = 540,
+
+			    duration = 0.25,
+
+			    finishColorRed = 1,
+
+			    maxRadiusVariance = 72.63,
+
+			    finishParticleSizeVariance = 250,
+
+			    gravityx = 0,
+
+			    speedVariance = 90.79,
+
+			    tangentialAccelVariance = -420.11,
+
+			    angleVariance = -142.62,
+
+			    angle = -244.11
+			}
+
+			-- Function that generates explosion (particle emitter)
+			local emitter = display.newEmitter(emitterParams)
+			emitter.x = explosionLocationX
+			emitter.y = explosionLocationY
 		end
 	end
 end
@@ -352,3 +409,4 @@ jumpButton:addEventListener('touch', jumpButton)
 ninja:addEventListener('sprite', resetToIdle)
 shootButton:addEventListener('touch', shootButton)
 Runtime:addEventListener('enterFrame', checkBulletsUsed)
+Runtime:addEventListener('collision', onCollision)
