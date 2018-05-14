@@ -311,8 +311,8 @@ local function onCollision(event)
 			end
 
 			-- Remove robot after collision
-			robot:removeSelf()
-			robot = nil
+			robot:setSequence('dead')
+			robot:play()
 
 			-- Sound effect
 			local explosionSound = audio.loadStream('./Assets/Sounds/explosion.wav')
